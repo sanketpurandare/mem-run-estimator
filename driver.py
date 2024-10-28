@@ -11,101 +11,110 @@ import torch.optim as optim
 from torch.distributed._tools import MemTracker, RuntimeEstimator
 from torch._subclasses.fake_tensor import FakeTensorMode
 
-from exp_utils import create_training_setup, DEVICE, gpu_types, model_names, Precision, runtime_est_modes
+from exp_utils import create_training_setup, DEVICE, gpu_types, model_names, Precision, runtime_est_modes, ExpType, BASE_DIR, OUT_DIR
 
 torch.backends.cuda.enable_flash_sdp(enabled=True)
 
 input_configs: Dict[str, List[Dict[str, Any]]] = {
     "hf_T5": [
-        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False},
-        {"batch_size": 8, "seq_len": 256, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 512, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 1024, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 2048, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 4096, "precision": Precision.HP, "ac": True}
+        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False, "image_size": -1},
+        {"batch_size": 8, "seq_len": 256, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 16, "seq_len": 512, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 16, "seq_len": 1024, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 32, "seq_len": 2048, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 32, "seq_len": 4096, "precision": Precision.HP, "ac": True, "image_size": -1}
     ],
     "hf_GPT2": [
-        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False},
-        {"batch_size": 8, "seq_len": 256, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 512, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 1024, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 2048, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 4096, "precision": Precision.HP, "ac": True}
+        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False, "image_size": -1},
+        {"batch_size": 8, "seq_len": 256, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 16, "seq_len": 512, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 16, "seq_len": 1024, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 32, "seq_len": 2048, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 32, "seq_len": 4096, "precision": Precision.HP, "ac": True, "image_size": -1}
     ],
     "timm_vit": [
-        {"batch_size": 4, "seq_len": None, "precision": Precision.FP, "ac": False},
-        {"batch_size": 8, "seq_len": None, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": None, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": None, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": None, "precision": Precision.HP, "ac": True},
+        {"batch_size": 4, "seq_len": -1, "precision": Precision.FP, "ac": False, "image_size": 224},
+        {"batch_size": 8, "seq_len": -1, "precision": Precision.MP, "ac": False, "image_size": 224},
+        {"batch_size": 16, "seq_len": -1, "precision": Precision.MP, "ac": False, "image_size": 384},
+        {"batch_size": 16, "seq_len": -1, "precision": Precision.HP, "ac": True, "image_size": 384},
+        {"batch_size": 32, "seq_len": -1, "precision": Precision.HP, "ac": True, "image_size": 512},
     ],
     "hf_clip": [
-        {"batch_size": 4, "seq_len": None, "precision": Precision.FP, "ac": False, "image_size": 224},
-        {"batch_size": 8, "seq_len": None, "precision": Precision.MP, "ac": False, "image_size": 224},
-        {"batch_size": 16, "seq_len": None, "precision": Precision.MP, "ac": False, "image_size": 384},
-        {"batch_size": 16, "seq_len": None, "precision": Precision.HP, "ac": True, "image_size": 384},
-        {"batch_size": 32, "seq_len": None, "precision": Precision.HP, "ac": True, "image_size": 512},
+        {"batch_size": 4, "seq_len": -1, "precision": Precision.FP, "ac": False, "image_size": 224},
+        {"batch_size": 8, "seq_len": -1, "precision": Precision.MP, "ac": False, "image_size": 224},
+        {"batch_size": 16, "seq_len": -1, "precision": Precision.MP, "ac": False, "image_size": 384},
+        {"batch_size": 16, "seq_len": -1, "precision": Precision.HP, "ac": True, "image_size": 384},
+        {"batch_size": 32, "seq_len": -1, "precision": Precision.HP, "ac": True, "image_size": 512},
     ],
     "llama_v3_1b": [
-        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False},
-        {"batch_size": 8, "seq_len": 256, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 512, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 1024, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 2048, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 4096, "precision": Precision.HP, "ac": True}
+        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False, "image_size": -1},
+        {"batch_size": 4, "seq_len": 256, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 8, "seq_len": 512, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 8, "seq_len": 1024, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 16, "seq_len": 2048, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 16, "seq_len": 4096, "precision": Precision.HP, "ac": True, "image_size": -1}
     ],
     "gemma_2b": [
-        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False},
-        {"batch_size": 8, "seq_len": 256, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 512, "precision": Precision.MP, "ac": False},
-        {"batch_size": 16, "seq_len": 1024, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 2048, "precision": Precision.HP, "ac": True},
-        {"batch_size": 32, "seq_len": 4096, "precision": Precision.HP, "ac": True}
+        {"batch_size": 4, "seq_len": 128, "precision": Precision.FP, "ac": False, "image_size": -1},
+        {"batch_size": 4, "seq_len": 256, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 8, "seq_len": 512, "precision": Precision.MP, "ac": False, "image_size": -1},
+        {"batch_size": 8, "seq_len": 1024, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 16, "seq_len": 2048, "precision": Precision.HP, "ac": True, "image_size": -1},
+        {"batch_size": 16, "seq_len": 4096, "precision": Precision.HP, "ac": True, "image_size": -1}
     ],
     "timm_convnext_v2": [
-        {"batch_size": 4, "seq_len": None, "precision": Precision.FP, "ac": False, "image_size": 224},
-        {"batch_size": 8, "seq_len": None, "precision": Precision.MP, "ac": False, "image_size": 224},
-        {"batch_size": 16, "seq_len": None, "precision": Precision.MP, "ac": False, "image_size": 384},
-        {"batch_size": 16, "seq_len": None, "precision": Precision.HP, "ac": True, "image_size": 384},
-        {"batch_size": 32, "seq_len": None, "precision": Precision.HP, "ac": True, "image_size": 512},
+        {"batch_size": 4, "seq_len": -1, "precision": Precision.FP, "ac": False, "image_size": 224},
+        {"batch_size": 8, "seq_len": -1, "precision": Precision.MP, "ac": False, "image_size": 224},
+        {"batch_size": 16, "seq_len": -1, "precision": Precision.MP, "ac": False, "image_size": 384},
+        {"batch_size": 16, "seq_len": -1, "precision": Precision.HP, "ac": True, "image_size": 384},
+        {"batch_size": 32, "seq_len": -1, "precision": Precision.HP, "ac": True, "image_size": 512},
     ],
 }
 
 
 class Experiment:
-    def __init__(
-        self,
-        model_name: str,
-        batch_size: int = 2,
-        seq_len: int = 128,
-        precision: Precision = Precision.HP,
-        ac: bool = False,
-        image_size: int = 224,
-        dev: torch.device = torch.device(DEVICE), 
-        init_mode: ContextManager = contextlib.nullcontext(),
-    ):  
+
+    def __init__(self, args):  
+
+        self.exp_type: ExpType
+        if args.real_execution:
+            self.exp_type = ExpType.real_execution
+        elif args.memory_estimation:
+            self.exp_type = ExpType.memory_est
+        elif args.runtime_estimation:
+            self.exp_type = ExpType.runtime_est
+            self.est_mode = args.runtime_estimation_mode
+        elif args.test:
+            self.exp_type = ExpType.test
+
+        init_mode = contextlib.nullcontext() if self.exp_type in [ExpType.real_execution, ExpType.test] else FakeTensorMode()
+        dev = torch.device(DEVICE)
         self.execution_ctx = init_mode
         self.device = dev
-        self.model, self.optimizer, self.train_step = create_training_setup(
-            model_name,
-            batch_size,
-            seq_len,
-            precision,
-            ac,
-            image_size,
-            dev,
-            init_mode
-        )
+        self.setup_cfg = {
+            "model_name": args.model_name,
+            "batch_size": args.batch_size,
+            "seq_len": args.seq_len,
+            "precision": Precision(args.precision),
+            "ac": args.enable_ac,
+            "image_size": args.image_size,
+            "init_mode": init_mode,
+            "dev": dev,
+        }
+        self.model, self.optimizer, self.train_step = create_training_setup(**self.setup_cfg)
         self.model.train()
         param_dtypes = set()
         param_count = 0
-        for param in self.model.parameters():
-            param_count += param.numel()
-            param_dtypes.add(param.dtype)
+        param_size = 0
+        for p in self.model.parameters():
+            param_numel = p.numel()
+            param_count += param_numel
+            param_size += param_numel * p.dtype.itemsize
+            param_dtypes.add(p.dtype)
 
         print(f"Model has {param_count} parameters.")
         print(f"Model has {param_dtypes} dtypes.")
-        print(f"Parameter Memory: {torch.cuda.memory_allocated() / 2**30} GiB")
+        print(f"Parameter Memory: {param_size / 2**30:.3f} GiB")
 
     def real_execution(self) -> Tuple[float, int, int]:
         torch.cuda.reset_peak_memory_stats()
@@ -146,7 +155,7 @@ class Experiment:
             if iter == 0:
                 mem_tracker.reset_mod_stats()
         peak_tracker = mem_tracker.get_tracker_snapshot("peak")[self.device]["Total"]
-        mem_tracker.display_snapshot("peak", units="MiB", tabulate=True)
+        mem_tracker.display_snapshot("peak", units="GiB", tabulate=True)
         tracking_time = (track_end_time - track_start_time) * 1e3
         print(f"Memory Tracking time (ms): {tracking_time}")
         return (peak_tracker, tracking_time)
@@ -163,26 +172,40 @@ class Experiment:
         run_est = runtime_estimator.total_runtime
         return (run_est, estimation_time)
 
+    def test(self) -> Tuple[float, int, int]:
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.reset_accumulated_memory_stats()
 
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
 
+        start_event.record()
+        with self.execution_ctx:
+            self.train_step(self.model, self.optimizer)
+        end_event.record()
+        torch.cuda.synchronize()
+        iter_time = start_event.elapsed_time(end_event)
+        mem_stats = torch.cuda.memory_stats()
+        peak_active = mem_stats["active_bytes.all.peak"]
+        peak_reserved = mem_stats["reserved_bytes.all.peak"]
+        print(f"Iter time: {iter_time} ms")
+        print(f"Peak Active Memory: {peak_active / 2**30} GiB")
+        print(f"Peak Reserved Memory: {peak_reserved / 2**30} GiB")
 
+        return iter_time, peak_active, peak_reserved
 
-    def run(self):
-        self.train_step(self.model, self.optimizer)
-        print("Successful.")
-
-
+    def run(self,):
+        if self.exp_type == ExpType.test:
+            iter_time, peak_active, peak_reserved = self.test()
+        elif self.exp_type == ExpType.real_execution:
+            iter_time, peak_active, peak_reserved = self.real_execution()
+        elif self.exp_type == ExpType.runtime_est:
+            run_est, est_time = self.runtime_estimation(self.est_mode)
+        elif self.exp_type == ExpType.memory_est:
+            peak_mem_est, est_time = self.memory_estimation()
 
 
 if __name__ == "__main__":
-    # with FakeTensorMode():
-    with contextlib.nullcontext():
-        with torch.device("cuda"):
-            exp = Experiment(model_names[3], model_batch_sizes[model_names[3]])
-        exp.init_optimizer_states()
-        exp.run()
-    # print(f"Memory: {torch.cuda.memory_allocated() / 2**30} GiB")
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model_name",
@@ -199,14 +222,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--seq_len",
-        default=20,
+        default=64,
         type=int,
         help="Training equence length"
     )
     parser.add_argument(
         "--image_size",
         default=224,
-        default=int,
+        type=int,
         help="Training image size"
     )
     parser.add_argument(
@@ -228,17 +251,23 @@ if __name__ == "__main__":
         choices=gpu_types,
         help="GPU type to use",
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
         "--real_execution", 
         action="store_true", 
         help="Execute a training iteration"
     )
-    parser.add_argument(
+    group.add_argument(
         "--memory_estimation", 
         action="store_true", 
         help="Estimate training memory"
     )
-    parser.add_argument(
+    group.add_argument(
+        "--test", 
+        action="store_true", 
+        help="Test an actual model run"
+    )
+    group.add_argument(
         "--runtime_estimation", 
         action="store_true", 
         help="Estimate training runtime"
@@ -250,3 +279,13 @@ if __name__ == "__main__":
         choices=runtime_est_modes,
         help="Runtime estimation modes",
     )
+    args = parser.parse_args()
+    print(args)
+
+    try:
+        exp = Experiment(args)
+        exp.run()
+    except Exception as e:
+        print(f"Experiment failed: {e}")
+        import traceback
+        traceback.print_exc()

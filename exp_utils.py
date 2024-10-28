@@ -14,7 +14,7 @@ from torch import nn, optim
 from torch.nn.attention import SDPBackend, sdpa_kernel
 from torch.distributed._composable import checkpoint
 
-DEVICE = "cuda"
+DEVICE = "cuda:0"
 BASE_DIR = "/n/holyscratch01/idreos_lab/Users/spurandare/mem-run-estimator"
 OUT_DIR = f"{BASE_DIR}/outputs"
 gpu_types: Set[str] = {"H100", "A100"}
@@ -30,6 +30,12 @@ model_names: Set[str] = {
     "gemma_2b",
     "timm_convnext_v2"
 }
+
+class ExpType(StrEnum):
+    runtime_est = "runtime_estimation"
+    memory_est = "memory_estimation"
+    real_execution = "real_execution"
+    test = "test"
 
 class Precision(StrEnum):
     FP = "FP"
@@ -133,8 +139,8 @@ def create_training_setup(
 
         with init_mode:
             with torch.device(dev):
-                model = model_cls.from_config(config=config).to(dtype=dtype)
-            optimizer = create_optimizer(model.paramaters())
+                model = model_cls._from_config(config=config).to(dtype=dtype)
+            optimizer = create_optimizer(model.parameters())
             if ac:
                 ac_class = model_ac_class[model_name]
                 apply_ac(model, ac_class)
