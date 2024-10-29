@@ -1,6 +1,8 @@
 from contextlib import nullcontext
 from enum import StrEnum
 import os
+import csv
+import copy
 from typing import Any, Callable, Dict, Iterator, List, Set, ContextManager, Tuple, Type
 
 import timm
@@ -13,6 +15,38 @@ import torch
 from torch import nn, optim
 from torch.nn.attention import SDPBackend, sdpa_kernel
 from torch.distributed._composable import checkpoint
+from torch.utils._python_dispatch import TorchDispatchMode
+import torch.utils._pytree as pytree
+from torch.utils.flop_counter import flop_registry
+
+class TestMode(TorchDispatchMode):
+
+    _float_types: Set[torch.dtype] = {
+        torch.float16,
+        torch.bfloat16,
+        torch.float32,
+        torch.float64,
+    }
+
+    def __torch_dispatch__(self, func, types, args=..., kwargs=None):
+        kwargs = kwargs if kwargs else {}
+        out = func(*args, **kwargs)
+        if func._overloadpacket in flop_registry:
+            flat_args_kwargs, args_spec = pytree.tree_flatten((args, kwargs))
+            flat_outs, out_spec = pytree.tree_flatten(out)
+
+            out_dtypes = {
+                t.dtype
+                for t in flat_outs
+                if isinstance(t, torch.Tensor) and t.dtype in TestMode._float_types
+            }
+
+            if torch.float32 in out_dtypes:
+                print(func.__name__)
+                print(out_dtypes)
+                print([arg.dtype for arg in flat_args_kwargs if isinstance(arg, torch.Tensor)])
+                print()     
+        return out
 
 DEVICE = "cuda:0"
 BASE_DIR = "/n/holyscratch01/idreos_lab/Users/spurandare/mem-run-estimator"
@@ -47,9 +81,9 @@ model_cards: Dict[str, str] = {
     "hf_GPT2": "gpt2-large",
     "llama_v3_1b": "meta-llama/Llama-3.2-1B-Instruct",
     "gemma_2b": "google/gemma-2b",
-    "timm_convnext_v2": "convnextv2_base.fcmae_ft_in22k_in1k",
-    "timm_vit": "vit_large_patch14_clip_224.laion2b_ft_in12k_in1k",
-    "hf_clip": "openai/clip-vit-base-patch32",
+    "timm_convnext_v2": "convnextv2_huge.fcmae_ft_in22k_in1k_512",
+    "timm_vit": "vit_huge_patch14_clip_224.laion2b_ft_in12k_in1k",
+    "hf_clip": "openai/clip-vit-large-patch14-336",
 }
 
 precision_to_dtype: Dict[Precision, torch.dtype] = {
@@ -61,19 +95,19 @@ precision_to_dtype: Dict[Precision, torch.dtype] = {
 model_class: Dict[str, Type] = {
     "hf_T5": AutoModelForSeq2SeqLM,
     "hf_GPT2": AutoModelForCausalLM,
-    "llama_v3_1b": LlamaForCausalLM,
-    "gemma_2b": GemmaForCausalLM,
+    "llama_v3_1b": AutoModelForCausalLM,
+    "gemma_2b": AutoModelForCausalLM,
     "hf_clip": CLIPModel,
 }
 
-model_ac_class: Dict[str, str] = {
-    "hf_T5": "T5Block",
-    "hf_GPT2": "GPT2Block",
-    "llama_v3_1b": "LlamaDecoderLayer",
-    "gemma_2b": "GemmaDecoderLayer",
-    "timm_convnext_v2": "ConvNeXtBlock",
-    "timm_vit": "Block",
-    "hf_clip": "CLIPEncoderLayer",
+model_ac_classes: Dict[str, List[str]] = {
+    "hf_T5": ["T5LayerFF", "T5LayerNorm"],
+    "hf_GPT2": ["GPT2Block",],
+    "llama_v3_1b": ["LlamaMLP","LlamaRMSNorm"],
+    "gemma_2b": ["GemmaMLP", "GemmaRMSNorm"],
+    "timm_convnext_v2": ["GlobalResponseNormMlp",],
+    "timm_vit": ["Block",],
+    "hf_clip": ["CLIPEncoderLayer",],
 }
 
 def generate_inputs_and_labels(
@@ -100,7 +134,7 @@ def generate_multimodal_inputs(
      
 
 def create_optimizer(param_iter: Iterator) -> optim.Optimizer:
-    optimizer = optim.AdamW(
+    optimizer = optim.Adam(
         param_iter,
         lr=1e-4,
         weight_decay=1.0e-4,
@@ -108,10 +142,10 @@ def create_optimizer(param_iter: Iterator) -> optim.Optimizer:
     )
     return optimizer
 
-def apply_ac(model: nn.Module, ac_class: str):
+def apply_ac(model: nn.Module, ac_classes: List[str]):
     for module in model.modules():
         module_class = module.__class__.__name__
-        if module_class == ac_class:
+        if module_class in ac_classes:
             checkpoint(module, preserve_rng_state=False)
 
 def create_training_setup(
@@ -135,20 +169,19 @@ def create_training_setup(
         model_card = model_cards[model_name]
         model_cls = model_class[model_name]
         config = AutoConfig.from_pretrained(model_card)
-        print(config.vocab_size)
 
         with init_mode:
             with torch.device(dev):
-                model = model_cls._from_config(config=config).to(dtype=dtype)
+                model = model_cls.from_config(config=config).to(dtype=dtype)
             optimizer = create_optimizer(model.parameters())
             if ac:
-                ac_class = model_ac_class[model_name]
-                apply_ac(model, ac_class)
+                ac_classes = model_ac_classes[model_name]
+                apply_ac(model, ac_classes)
 
         def hf_train_step(
                 model: nn.Module, optim: optim.Optimizer,
             ):
-                input_ids, labels = generate_inputs_and_labels(batch_size, model.vocab_size, seq_len, dev)
+                input_ids, labels = generate_inputs_and_labels(batch_size, config.vocab_size, seq_len, dev)
                 inputs = {"input_ids": input_ids, "labels": labels}
                 with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.CUDNN_ATTENTION, SDPBackend.EFFICIENT_ATTENTION]):
                     with amp_context:
@@ -167,8 +200,8 @@ def create_training_setup(
             optimizer = timm.optim.create_optimizer_v2(model, opt="adam")     
             loss_fn = nn.functional.cross_entropy
             if ac:
-                ac_class = model_ac_class[model_name]
-                apply_ac(model, ac_class)
+                ac_classes = model_ac_classes[model_name]
+                apply_ac(model, ac_classes)
 
         def timm_train_step(
                 model: nn.Module, optim: optim.Optimizer,
@@ -197,7 +230,7 @@ def create_training_setup(
 
             class CLIP(nn.Module):
                 def __init__(self, clip_model, loss_mod):
-                    super.__init__()
+                    super().__init__()
                     self.add_module('clip_model', clip_model)
                     self.add_module('contrastive_loss_with_temp', loss_mod)
 
@@ -208,8 +241,8 @@ def create_training_setup(
 
             model_with_loss = CLIP(model, loss_fn)
             if ac:
-                ac_class = model_ac_class[model_name]
-                apply_ac(model_with_loss, ac_class)
+                ac_classes = model_ac_classes[model_name]
+                apply_ac(model_with_loss, ac_classes)
             optimizer = create_optimizer(model_with_loss.parameters())
         
         def clip_train_step(
@@ -217,8 +250,8 @@ def create_training_setup(
         ):
                 img, ids, attn_mask = generate_multimodal_inputs(
                     batch_size,
-                    model.config.text_config.vocab_size,
-                    model.config.text_config.max_length,
+                    model.clip_model.config.text_config.vocab_size,
+                    model.clip_model.config.text_config.max_length,
                     image_size,
                     dtype,
                     dev
@@ -247,8 +280,17 @@ def write_to_logfile(file_name: str, log_record: str):
         # Create the lock file and write to the file
         with open(lock_file, "w") as f:
             f.write("locked")
-        with open(file_name, "a") as f:
-            f.write(log_record)
-            f.flush()
+        with open(file_name, 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(log_record)
         # Release the lock file
         os.remove(lock_file)
+
+def override_args_with_configs(args, config: Dict[str, Any]):
+    b_args = copy.deepcopy(args)
+    b_args.batch_size = config["batch_size"]
+    b_args.seq_len = config["seq_len"]
+    b_args.precision = config["precision"].value
+    b_args.enable_ac = config["ac"]
+    b_args.image_size = config["image_size"]
+    return b_args
