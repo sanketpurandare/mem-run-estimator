@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:nvidia_h100_80gb_hbm3:1
 #SBATCH --time=0-01:00:00
 #SBATCH --mem=64gb
-#SBATCH --array=0-7
+#SBATCH --array=0-52
 #SBATCH --output=/n/holyscratch01/idreos_lab/Users/spurandare/mem-run-estimator/job_logs/bench_%x_%j.out
 #SBATCH --error=/n/holyscratch01/idreos_lab/Users/spurandare/mem-run-estimator/job_logs/bench_%x_%j.err
 #SBATCH --open-mode=append
@@ -43,28 +43,28 @@ for model in "${!model_configs[@]}"; do
   (( total_configs += ${model_configs[$model]} ))
 done
 
-# # Determine model and config index
-# for model in "${!model_configs[@]}"; do
-#   if (( $SLURM_ARRAY_TASK_ID >= ${model_offsets[$model]} && $SLURM_ARRAY_TASK_ID < ${model_offsets[$model]} + ${model_configs[$model]} )); then
-#     MODEL_NAME=$model
-#     CONFIG_IDX=$(( $SLURM_ARRAY_TASK_ID - ${model_offsets[$model]} ))
-#     break
-#   fi
-# done
+# Determine model and config index
+for model in "${!model_configs[@]}"; do
+  if (( $SLURM_ARRAY_TASK_ID >= ${model_offsets[$model]} && $SLURM_ARRAY_TASK_ID < ${model_offsets[$model]} + ${model_configs[$model]} )); then
+    MODEL_NAME=$model
+    CONFIG_IDX=$(( $SLURM_ARRAY_TASK_ID - ${model_offsets[$model]} ))
+    break
+  fi
+done
 
-#for single model run
-MODEL_NAME=hf_GPT2
-CONFIG_IDX=$SLURM_ARRAY_TASK_ID
-
-srun python driver.py \
-    --real_execution \
-    --model_name $MODEL_NAME \
-    --preset_config \
-    --config_idx $CONFIG_IDX
+# #for single model run
+# MODEL_NAME=hf_GPT2
+# CONFIG_IDX=$SLURM_ARRAY_TASK_ID
 
 # srun python driver.py \
-#     --runtime_estimation \
-#     --runtime_estimation_mode operator-level-benchmark \
+#     --real_execution \
 #     --model_name $MODEL_NAME \
 #     --preset_config \
 #     --config_idx $CONFIG_IDX
+
+srun python driver.py \
+    --runtime_estimation \
+    --runtime_estimation_mode operator-level-benchmark \
+    --model_name $MODEL_NAME \
+    --preset_config \
+    --config_idx $CONFIG_IDX

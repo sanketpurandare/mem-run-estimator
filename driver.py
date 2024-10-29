@@ -222,7 +222,10 @@ class Experiment:
 
     def run(self,):
         Path(f"{OUT_DIR}/").mkdir(parents=True, exist_ok=True)
-        out_file = f"{OUT_DIR}/{self.exp_type.value}_{self.gpu_type}.csv"
+        if self.exp_type == ExpType.runtime_est:
+            out_file = f"{OUT_DIR}/{self.exp_type.value}_{self.est_mode}_{self.gpu_type}_CFG2.csv"
+        else:
+            out_file = f"{OUT_DIR}/{self.exp_type.value}_{self.gpu_type}.csv"
 
         cfg = self.setup_cfg
         log_record = [
@@ -380,6 +383,7 @@ if __name__ == "__main__":
                 b_args = override_args_with_configs(args, config)
                 if args.runtime_estimation:
                     bench_est_modes = {'operator-level-cost-model', 'operator-level-learned-model'}
+                    # bench_est_modes = ['operator-level-learned-model',]
                     for est_mode in bench_est_modes:
                         r_args = copy.deepcopy(b_args)
                         r_args.runtime_estimation_mode = est_mode
