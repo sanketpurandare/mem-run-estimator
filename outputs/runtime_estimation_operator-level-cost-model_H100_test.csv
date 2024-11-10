@@ -1,0 +1,12 @@
+llama_v3_1b,4,4096,-1,HP,True,operator-level-cost-model,361.90509821439747,1456.7897319793701
+llama_v3_1b,4,4096,-1,HP,True,operator-level-cost-model,361.90509821439747,1464.263916015625
+llama_v3_1b,2,8192,-1,HP,True,operator-level-cost-model,373.8940603090317,1455.0998210906982
+llama_v3_1b,2,8192,-1,HP,True,operator-level-cost-model,380.3931887279404,1479.062557220459
+llama_v3_1b,8,2048,-1,HP,True,operator-level-cost-model,360.90245002824315,1467.7519798278809
+gemma_2b,2,4096,-1,HP,True,operator-level-cost-model,329.2916149012112,1950.3352642059326
+gemma_2b,8,512,-1,MP,False,operator-level-cost-model,207.85543388163708,1593.2378768920898
+llama_v3_1b,4,4096,-1,HP,True,operator-level-cost-model,367.4070147036279,1463.3498191833496
+llama_v3_1b,4,4096,-1,HP,True,operator-level-cost-model,367.4070147036279,1433.959722518921
+timm_convnext_v2,64,-1,224,MP,False,operator-level-cost-model,294.6256690285649,1817.2156810760498
+hf_clip,64,20,336,HP,True,operator-level-cost-model,248.00239491266328,2804.9263954162598
+timm_vit,64,-1,224,HP,False,operator-level-cost-model,138.5154295117804,1750.385046005249

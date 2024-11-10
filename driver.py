@@ -120,7 +120,6 @@ class Experiment:
         self.gpu_type = args.gpu_type
         self.model, self.optimizer, self.train_step = create_training_setup(**self.setup_cfg)
         self.model.train()
-        print(self.model)
         
         # for name, module in self.model.named_modules():
         #     print(name)
@@ -192,7 +191,7 @@ class Experiment:
         torch.cuda.synchronize()
         est_end_time = time.time()
         estimation_time = (est_end_time - est_start_time) * 1e3
-        run_est = runtime_estimator.total_runtime
+        run_est = runtime_estimator.total_compute_time
         print(f"Estimation time (ms): {estimation_time}")
         return (run_est, estimation_time)
 
@@ -223,7 +222,7 @@ class Experiment:
     def run(self,):
         Path(f"{OUT_DIR}/").mkdir(parents=True, exist_ok=True)
         if self.exp_type == ExpType.runtime_est:
-            out_file = f"{OUT_DIR}/{self.exp_type.value}_{self.est_mode}_{self.gpu_type}_CFG2.csv"
+            out_file = f"{OUT_DIR}/{self.exp_type.value}_{self.est_mode}_{self.gpu_type}_test.csv"
         else:
             out_file = f"{OUT_DIR}/{self.exp_type.value}_{self.gpu_type}.csv"
 

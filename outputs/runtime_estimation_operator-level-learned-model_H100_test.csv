@@ -1,0 +1,12 @@
+llama_v3_1b,4,4096,-1,HP,True,operator-level-learned-model,854.1417837138132,6925.842761993408
+llama_v3_1b,4,4096,-1,HP,True,operator-level-learned-model,459.63242421287094,6915.817975997925
+llama_v3_1b,2,8192,-1,HP,True,operator-level-learned-model,513.502267505904,7089.391469955444
+llama_v3_1b,8,2048,-1,HP,True,operator-level-learned-model,433.24879587050555,7105.708122253418
+gemma_2b,2,4096,-1,HP,True,operator-level-learned-model,426.3643740567984,7277.512073516846
+gemma_2b,8,512,-1,MP,False,operator-level-learned-model,218.91366439779634,7146.89040184021
+gemma_2b,8,512,-1,MP,False,operator-level-learned-model,243.0921474015543,7002.057075500488
+llama_v3_1b,8,2048,-1,HP,True,operator-level-learned-model,472.6967122456339,7068.39394569397
+llama_v3_1b,8,2048,-1,HP,True,operator-level-learned-model,451.17966695011995,7033.960819244385
+llama_v3_1b,4,4096,-1,HP,True,operator-level-learned-model,477.56466782653473,7063.987731933594
+llama_v3_1b,4,4096,-1,HP,True,operator-level-learned-model,477.56466782653473,6916.367292404175
+llama_v3_1b,4,4096,-1,HP,True,operator-level-learned-model,477.56466782653473,7414.777994155884
