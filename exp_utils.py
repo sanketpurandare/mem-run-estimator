@@ -49,7 +49,7 @@ class TestMode(TorchDispatchMode):
         return out
 
 DEVICE = "cuda:0"
-BASE_DIR = "/n/holyscratch01/idreos_lab/Users/spurandare/mem-run-estimator"
+BASE_DIR = "/n/holylabs/LABS/idreos_lab/Users/azhao/mem-run-estimator"
 OUT_DIR = f"{BASE_DIR}/outputs"
 gpu_types: Set[str] = {"H100", "A100"}
 

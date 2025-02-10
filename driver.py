@@ -17,6 +17,12 @@ from exp_utils import create_training_setup, DEVICE, gpu_types, model_names, Pre
 
 torch.backends.cuda.enable_flash_sdp(enabled=True)
 
+# azhao: profile model
+import numpy as np
+from torch.utils.flop_counter import FlopCounterMode, op_registry
+from collections import defaultdict
+op_to_params = defaultdict(list)
+
 input_configs = {
     "hf_T5": [
         {"batch_size": 6, "seq_len": 512, "precision": Precision.MP, "ac": False, "image_size": -1},
@@ -230,20 +236,37 @@ class Experiment:
         log_record = [
             cfg['model_name'], cfg['batch_size'], cfg["seq_len"], cfg["image_size"], cfg['precision'].value, cfg['ac']
         ]
-        if self.exp_type == ExpType.test:
-            iter_time, peak_active, peak_reserved = self.test()
-            log_record.extend([iter_time, peak_active, peak_reserved])
-        elif self.exp_type == ExpType.real_execution:
-            iter_time, peak_active, peak_reserved = self.real_execution()
-            log_record.extend([iter_time, peak_active, peak_reserved])
-        elif self.exp_type == ExpType.runtime_est:
-            run_est, est_time = self.runtime_estimation(self.est_mode)
-            log_record.extend([self.est_mode, run_est, est_time])
-        elif self.exp_type == ExpType.memory_est:
-            peak_mem_est, est_time = self.memory_estimation()
-            log_record.extend([peak_mem_est, est_time])
-            if peak_mem_est > (70 * 2**30):
-                print(f"Delete: {log_record}")
+        flop_counter = FlopCounterMode(self.model)
+        with flop_counter:
+            if self.exp_type == ExpType.test:
+                iter_time, peak_active, peak_reserved = self.test()
+                log_record.extend([iter_time, peak_active, peak_reserved])
+            elif self.exp_type == ExpType.real_execution:
+                iter_time, peak_active, peak_reserved = self.real_execution()
+                log_record.extend([iter_time, peak_active, peak_reserved])
+            elif self.exp_type == ExpType.runtime_est:
+                run_est, est_time = self.runtime_estimation(self.est_mode)
+                log_record.extend([self.est_mode, run_est, est_time])
+            elif self.exp_type == ExpType.memory_est:
+                peak_mem_est, est_time = self.memory_estimation()
+                log_record.extend([peak_mem_est, est_time])
+                if peak_mem_est > (70 * 2**30):
+                    print(f"Delete: {log_record}")
+        global ops_to_params
+        model_shapes = flop_counter.get_shapes()
+        # Add model_shapes to op_to_params
+        for op, shapes in model_shapes.items():
+            op_to_params[op].extend(shapes)
+
+        dir = "/n/holylabs/LABS/idreos_lab/Users/azhao/mem-run-estimator/conv_sizes"
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        import pandas as pd
+        from torch.utils.flop_counter import op_registry, op_names_registry
+        for op, params in op_to_params.items():
+            columns = op_registry[op]()
+            df = pd.DataFrame(params, columns=columns)
+            df.to_csv(os.path.join(dir, op_names_registry[op] + ".csv"), index=False)
 
         write_to_logfile(out_file, log_record)
 

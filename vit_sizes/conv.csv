@@ -1,0 +1,6 @@
+x_shape,w_shape,bias,stride,padding,dilation,transposed,out_shape
+"torch.Size([64, 3, 224, 224])","torch.Size([1280, 3, 14, 14])",,"[14, 14]","[0, 0]","[1, 1]",False,"torch.Size([64, 1280, 16, 16])"
+"torch.Size([64, 3, 224, 224])","torch.Size([1280, 3, 14, 14])",,"[14, 14]","[0, 0]","[1, 1]",False,"torch.Size([64, 1280, 16, 16])"
+"torch.Size([64, 3, 224, 224])","torch.Size([1280, 3, 14, 14])",,"[14, 14]","[0, 0]","[1, 1]",False,"torch.Size([64, 1280, 16, 16])"
+"torch.Size([64, 3, 224, 224])","torch.Size([1280, 3, 14, 14])",,"[14, 14]","[0, 0]","[1, 1]",False,"torch.Size([64, 1280, 16, 16])"
+"torch.Size([64, 3, 224, 224])","torch.Size([1280, 3, 14, 14])",,"[14, 14]","[0, 0]","[1, 1]",False,"torch.Size([64, 1280, 16, 16])"
