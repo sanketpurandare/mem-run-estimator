@@ -1,0 +1,5 @@
+batch_size,seq_length,image_size,precision,activation_checkpointing,estimation_type,predicted_time,time_for_estimation,actual_time,accuracy
+256,-1,224,HP,True,Benchmark,815.671,11073.028,764.062,0.937
+256,-1,224,HP,True,Cost Model,645.361,5925.155,764.062,1.184
+256,-1,224,HP,True,Cost Model,480.085,2888.477,764.062,1.592
+256,-1,224,HP,True,Learned,885.132,7353.140,764.062,0.863

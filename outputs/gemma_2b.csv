@@ -1,0 +1,5 @@
+batch_size,seq_length,image_size,precision,activation_checkpointing,estimation_type,predicted_time,time_for_estimation,actual_time,accuracy
+4,1024,-1,FP,True,Benchmark,1648.08,13001.56,1605.04,0.97
+4,1024,-1,FP,True,Cost Model,1068.72,1306.18,1605.04,1.50
+4,1024,-1,FP,True,Cost Model,1064.80,1775.42,1605.04,1.51
+4,1024,-1,FP,True,Learned,1579.44,7117.60,1605.04,1.02

@@ -1,0 +1,17 @@
+batch_size,seq_length,image_size,precision,activation_checkpointing,estimation_type,predicted_time,time_for_estimation,actual_time,accuracy
+32,20,336,FP,False,Benchmark,999.47,10050.04,936.18,0.94
+32,20,336,FP,False,Benchmark,999.47,10050.04,935.40,0.94
+32,20,336,FP,False,Benchmark,1000.50,9872.16,936.18,0.94
+32,20,336,FP,False,Benchmark,1000.50,9872.16,935.40,0.93
+32,20,336,FP,False,Cost Model,609.15,3659.49,936.18,1.54
+32,20,336,FP,False,Cost Model,609.15,3659.49,935.40,1.54
+32,20,336,FP,False,Cost Model,609.15,2869.34,936.18,1.54
+32,20,336,FP,False,Cost Model,609.15,2869.34,935.40,1.54
+32,20,336,FP,False,Cost Model,585.45,2934.49,936.18,1.60
+32,20,336,FP,False,Cost Model,585.45,2934.49,935.40,1.60
+32,20,336,FP,False,Cost Model,585.45,2227.90,936.18,1.60
+32,20,336,FP,False,Cost Model,585.45,2227.90,935.40,1.60
+32,20,336,FP,False,Learned,950.12,7161.46,936.18,0.99
+32,20,336,FP,False,Learned,950.12,7161.46,935.40,0.98
+32,20,336,FP,False,Learned,950.12,7230.51,936.18,0.99
+32,20,336,FP,False,Learned,950.12,7230.51,935.40,0.98
